@@ -1,0 +1,6 @@
+#ifndef DISTFS_CONSTS_H
+#define DISTFS_CONSTS_H
+
+#define CHUNK_SIZE_BYTES (1024 * 1024 * 8)
+
+#endif //DISTFS_CONSTS_H

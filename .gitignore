@@ -1,0 +1,4 @@
+CMakeLists.txt
+.idea/
+cmake-build-debug/
+bazel-*
