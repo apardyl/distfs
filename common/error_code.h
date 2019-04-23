@@ -4,6 +4,7 @@
 enum class ErrorCode {
     OK,
     NOT_FOUND,
+    ACCESS_DENIED,
     NOT_IMPLEMENTED
 };
 

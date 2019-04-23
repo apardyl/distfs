@@ -6,7 +6,7 @@
 #include <cstddef>
 #include <functional>
 #include <sys/stat.h>
-#include "error_code.h"
+#include "../common/error_code.h"
 #include "types.h"
 
 class MetaFileSystem {
