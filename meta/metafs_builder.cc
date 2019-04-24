@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <algorithm>
+#include <sys/xattr.h>
 #include "metafs_builder.h"
 #include "../common/consts.h"
 
@@ -16,9 +17,7 @@ MetaFSBuilder::MetaFSBuilder(const std::string &root_path) : root_path(root_path
 std::tuple<std::unique_ptr<char>, uint32_t> MetaFSBuilder::create() {
     // leave place for metadata length
     current_pos = sizeof(uint32_t);
-
     scan_dfs(root_path);
-
     // write length
     *(reinterpret_cast<uint32_t *>(data)) = current_pos;
     return std::make_tuple(std::unique_ptr<char>(data), current_pos);
@@ -39,47 +38,70 @@ void MetaFSBuilder::set_stat(const struct stat &st, Node *n) {
     n->uid = st.st_uid;
     n->gid = st.st_gid;
     n->size = static_cast<uint64_t>(st.st_size);
-    n->blockcnt = static_cast<uint64_t>(st.st_blocks);
+    n->block_count = static_cast<uint64_t>(st.st_blocks);
     n->ctime_ns = static_cast<uint64_t>(st.st_ctim.tv_nsec + st.st_ctim.tv_sec * 1000000000);
     n->mtime_ns = static_cast<uint64_t>(st.st_mtim.tv_nsec + st.st_mtim.tv_sec * 1000000000);
 }
 
-uint32_t MetaFSBuilder::add_file(const struct stat &st) {
-    reserve_buffer(sizeof(Node));
+void MetaFSBuilder::add_xattrs(const Xattrs &xattrs) {
+    auto *entries = reinterpret_cast<Entry *>(data + current_pos);
+    current_pos += sizeof(Entry) * xattrs.size();
+    for (unsigned i = 0; i < xattrs.size(); i++) {
+        entries[i].name_offset = current_pos;
+        strncpy(data + current_pos, xattrs[i].first.c_str(), xattrs[i].first.size() + 1);
+        current_pos += xattrs[i].first.size() + 1;
+        entries[i].data_offset = current_pos;
+        *(reinterpret_cast<uint32_t *>(data + current_pos)) = static_cast<uint32_t>(xattrs[i].second.size());
+        current_pos += sizeof(uint32_t);
+        strncpy(data + current_pos, xattrs[i].second.c_str(), xattrs[i].second.size() + 1);
+        current_pos += xattrs[i].second.size() + 1;
+    }
+}
+
+uint32_t MetaFSBuilder::add_file(const struct stat &st, const Xattrs &xattrs) {
+    uint32_t pos = current_pos;
+    reserve_buffer(sizeof(Node) + xattrs_len(xattrs));
     Node *n = reinterpret_cast<Node *>(data + current_pos);
     set_stat(st, n);
-    uint32_t pos = current_pos;
     current_pos += sizeof(Node);
+    n->xattrs_count = static_cast<uint32_t>(xattrs.size());
+    add_xattrs(xattrs);
     return pos;
 }
 
-uint32_t MetaFSBuilder::add_link(const struct stat &st, const char *target) {
+uint32_t MetaFSBuilder::add_link(const struct stat &st, const char *target, const Xattrs &xattrs) {
+    uint32_t pos = current_pos;
     auto len = static_cast<uint32_t>(std::strlen(target)) + 1;
-    reserve_buffer(sizeof(Node) + len);
+    reserve_buffer(sizeof(Node) + len + xattrs_len(xattrs));
     Node *n = reinterpret_cast<Node *>(data + current_pos);
     set_stat(st, n);
-    strncpy(data + current_pos + sizeof(Node), target, len);
-    uint32_t pos = current_pos;
-    current_pos += sizeof(Node) + len;
+    current_pos += sizeof(Node);
+    n->xattrs_count = static_cast<uint32_t>(xattrs.size());
+    add_xattrs(xattrs);
+    strncpy(data + current_pos, target, len);
+    n->data_offset = current_pos;
+    current_pos += len;
     return pos;
 }
 
 std::tuple<uint32_t, uint32_t>
-MetaFSBuilder::add_dir(const struct stat &st, const std::vector<std::string> &sorted_entries) {
+MetaFSBuilder::add_dir(const struct stat &st, const std::vector<std::string> &sorted_entries, const Xattrs &xattrs) {
     uint32_t pos = current_pos;
     uint32_t len = 0;
     for (const auto &e : sorted_entries) {
-        len += e.size() + 1 + sizeof(Dirent);
+        len += e.size() + 1 + sizeof(Entry);
     }
-    reserve_buffer(sizeof(Node) + len);
+    reserve_buffer(sizeof(Node) + len + xattrs_len(xattrs));
 
     Node *n = reinterpret_cast<Node *>(data + current_pos);
     set_stat(st, n);
     n->length = static_cast<uint32_t>(sorted_entries.size());
     current_pos += sizeof(Node);
-    uint32_t dirent_pos = current_pos;
-    auto dirent = reinterpret_cast<Dirent *>(data + dirent_pos);
-    current_pos += sizeof(Dirent) * sorted_entries.size();
+    n->xattrs_count = static_cast<uint32_t>(xattrs.size());
+    add_xattrs(xattrs);
+    n->data_offset = current_pos;
+    auto dirent = reinterpret_cast<Entry *>(data + n->data_offset);
+    current_pos += sizeof(Entry) * sorted_entries.size();
 
     for (unsigned int i = 0; i < sorted_entries.size(); i++) {
         strncpy(data + current_pos, sorted_entries[i].c_str(), sorted_entries[i].size() + 1);
@@ -87,12 +109,19 @@ MetaFSBuilder::add_dir(const struct stat &st, const std::vector<std::string> &so
         current_pos += sorted_entries[i].size() + 1;
     }
 
-    return std::make_tuple(pos, dirent_pos);
+    return std::make_tuple(pos, n->data_offset);
 }
 
 uint32_t MetaFSBuilder::scan_dfs(const std::string &path) {
     struct stat st{};
-    lstat(path.c_str(), &st);
+
+    if (lstat(path.c_str(), &st) != 0 || !ISSUPPORTED(st.st_mode)) {
+        return 0;
+    }
+
+    Xattrs xattrs;
+    read_xattrs(path, &xattrs);
+
     if (S_ISLNK(st.st_mode)) {
         char name[PATH_MAX + 1];
         ssize_t res = readlink(path.c_str(), name, PATH_MAX);
@@ -101,10 +130,10 @@ uint32_t MetaFSBuilder::scan_dfs(const std::string &path) {
         } else {
             name[res] = '\0';
         }
-        return add_link(st, name);
+        return add_link(st, name, xattrs);
     }
     if (S_ISREG(st.st_mode)) {
-        return add_file(st);
+        return add_file(st, xattrs);
     }
     if (S_ISDIR(st.st_mode)) {
         std::vector<std::string> entries;
@@ -123,7 +152,7 @@ uint32_t MetaFSBuilder::scan_dfs(const std::string &path) {
         }
         closedir(dir);
         std::sort(entries.begin(), entries.end());
-        auto[addr, dirents] = add_dir(st, entries);
+        auto[addr, dirents] = add_dir(st, entries, xattrs);
 
         for (unsigned int i = 0; i < entries.size(); i++) {
             set_dirent_node_offset(dirents, i, scan_dfs(path + '/' + entries[i]));
@@ -135,5 +164,32 @@ uint32_t MetaFSBuilder::scan_dfs(const std::string &path) {
 }
 
 void MetaFSBuilder::set_dirent_node_offset(uint32_t dirent_pos, int pos, uint32_t value) {
-    reinterpret_cast<Dirent *>(data + dirent_pos)[pos].node_offset = value;
+    reinterpret_cast<Entry *>(data + dirent_pos)[pos].data_offset = value;
+}
+
+void MetaFSBuilder::read_xattrs(const std::string &path, Xattrs *xattrs) {
+    char buff[std::max(XATTR_LIST_MAX, XATTR_SIZE_MAX)];
+    ssize_t res = llistxattr(path.c_str(), buff, XATTR_LIST_MAX);
+    if (res == -1) {
+        return;
+    }
+    for (size_t i = 0; i < static_cast<size_t>(res);) {
+        xattrs->emplace_back(buff + i, "");
+        i += strnlen(buff + i, XATTR_LIST_MAX - i) + 1;
+    }
+    for (auto &x : *xattrs) {
+        res = getxattr(path.c_str(), x.first.c_str(), buff, XATTR_SIZE_MAX);
+        if (res != -1) {
+            x.second = std::string(buff, static_cast<unsigned long>(res));
+        }
+    }
+    std::sort(xattrs->begin(), xattrs->end());
+}
+
+uint32_t MetaFSBuilder::xattrs_len(const Xattrs &xattrs) {
+    uint32_t sum = 0;
+    for (auto &x : xattrs) {
+        sum += x.first.size() + 1 + x.second.size() + 1 + sizeof(Entry) + sizeof(uint32_t);
+    }
+    return sum;
 }

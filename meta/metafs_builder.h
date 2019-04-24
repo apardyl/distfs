@@ -7,6 +7,8 @@
 #include "types.h"
 #include <sys/stat.h>
 
+using Xattrs = std::vector<std::pair<std::string, std::string>>;
+
 class MetaFSBuilder {
     std::string root_path;
     char *data;
@@ -15,11 +17,18 @@ class MetaFSBuilder {
 
     void set_stat(const struct stat &st, Node *n);
 
-    uint32_t add_file(const struct stat &st);
+    void add_xattrs(const Xattrs &xattrs);
 
-    uint32_t add_link(const struct stat &st, const char *target);
+    void read_xattrs(const std::string &path, Xattrs *xattrs);
 
-    std::tuple<uint32_t, uint32_t> add_dir(const struct stat &st, const std::vector<std::string> &sorted_entries);
+    uint32_t xattrs_len(const Xattrs& xattrs);
+
+    uint32_t add_file(const struct stat &st, const Xattrs &xattrs);
+
+    uint32_t add_link(const struct stat &st, const char *target, const Xattrs &xattrs);
+
+    std::tuple<uint32_t, uint32_t>
+    add_dir(const struct stat &st, const std::vector<std::string> &sorted_entries, const Xattrs &xattrs);
 
     void set_dirent_node_offset(uint32_t dirent_pos, int pos, uint32_t value);
 

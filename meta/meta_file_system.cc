@@ -18,11 +18,14 @@ ErrorCode MetaFileSystem::get_file_position(const char *path, uint32_t *file_off
     return code;
 }
 
-ErrorCode MetaFileSystem::get_symlink(const char *path, size_t buff_size, char *buff) {
+ErrorCode MetaFileSystem::get_symlink(const char *path, size_t buff_size, char *buff, ssize_t *length) {
     auto[code, offset] = get_node_offset(path);
     if (code == ErrorCode::OK) {
-        offset += sizeof(Node);
-        std::strncpy(buff, data + offset, buff_size);
+        Node *n = reinterpret_cast<Node *>(offset + data);
+        if (std::strlen(data + n->data_offset) > buff_size) {
+            return ErrorCode::TOO_LONG;
+        }
+        std::strncpy(buff, data + n->data_offset, buff_size);
     }
     return code;
 }
@@ -39,13 +42,55 @@ ErrorCode MetaFileSystem::get_dir(const char *path, std::function<void(const cha
     auto[code, offset] = get_node_offset(path);
     if (code == ErrorCode::OK) {
         Node *n = reinterpret_cast<Node *>(offset + data);
-        offset += sizeof(Node);
-        auto *dirents = reinterpret_cast<Dirent *>(offset + data);
+        auto *dirents = reinterpret_cast<Entry *>(n->data_offset + data);
         for (unsigned i = 0; i < n->length; i++) {
             struct stat st{};
-            get_stat(dirents[i].node_offset, &st);
+            get_stat(dirents[i].data_offset, &st);
             dir_reader(data + dirents[i].name_offset, &st);
         }
+    }
+    return code;
+}
+
+
+ErrorCode MetaFileSystem::list_xattr(const char *path, char *list, size_t buff_size, ssize_t *length) {
+    auto[code, offset] = get_node_offset(path);
+    if (code == ErrorCode::OK) {
+        Node *n = reinterpret_cast<Node *>(offset + data);
+        offset += sizeof(Node);
+        auto *entries = reinterpret_cast<Entry *>(data + offset);
+        for (unsigned i = 0; i < n->xattrs_count; i++) {
+            size_t res = strlen(data + entries[i].name_offset) + 1;
+            if (res > buff_size) {
+                return ErrorCode::TOO_LONG;
+            }
+            strncpy(list, data + entries[i].name_offset, buff_size);
+            buff_size -= res;
+            list += res;
+            *length += res;
+        }
+        return ErrorCode::NOT_IMPLEMENTED;
+    }
+    return code;
+}
+
+ErrorCode
+MetaFileSystem::get_xattr(const char *path, const char *name, void *value, size_t buff_size, ssize_t *length) {
+    auto[code, offset] = get_node_offset(path);
+    if (code == ErrorCode::OK) {
+        Node *n = reinterpret_cast<Node *>(offset + data);
+        offset += sizeof(Node);
+        auto *entries = reinterpret_cast<Entry *>(data + offset);
+        uint32_t data_offset = find_entity(name, entries, n->xattrs_count);
+        if (data_offset == 0) {
+            return ErrorCode::NO_DATA;
+        }
+        uint32_t data_size = *reinterpret_cast<uint32_t *>(data + data_offset);
+        if (data_size > buff_size) {
+            return ErrorCode::TOO_LONG;
+        }
+        memcpy(value, data + data_offset + sizeof(uint32_t), data_size);
+        *length = data_size;
     }
     return code;
 }
@@ -57,7 +102,7 @@ void MetaFileSystem::get_stat(uint32_t offset, struct stat *st) {
     st->st_uid = n->uid;
     st->st_gid = n->gid;
     st->st_size = n->size;
-    st->st_blocks = n->blockcnt;
+    st->st_blocks = n->block_count;
     st->st_atim.tv_nsec = n->mtime_ns % 1000000000; // use mtime as atime
     st->st_atim.tv_sec = n->mtime_ns / 1000000000;
     st->st_mtim.tv_nsec = n->mtime_ns % 1000000000;
@@ -104,24 +149,27 @@ uint32_t MetaFileSystem::get_child(uint32_t offset, const std::string &name) {
     if (!S_ISDIR(n->mode)) {
         return 0;
     }
-    auto *dirents = reinterpret_cast<Dirent *>(offset + data + sizeof(Node));
+    auto *dirents = reinterpret_cast<Entry *>(offset + data + sizeof(Node));
 
-    int a = 0, b = n->length - 1;
+    return find_entity(name.c_str(), dirents, n->length);
+}
+
+uint32_t MetaFileSystem::find_entity(const char *name, const Entry *ents, uint32_t ents_size) {
+    int a = 0, b = ents_size - 1;
 
     while (a < b) {
         int m = (a + b) / 2;
-
-        int x = std::strcmp(data + dirents[m].name_offset, name.c_str());
+        int x = std::strcmp(data + ents[m].name_offset, name);
         if (x == 0) {
-            return dirents[m].node_offset;
+            return ents[m].data_offset;
         } else if (x < 0) {
             a = m + 1;
         } else {
             b = m - 1;
         }
     }
-    if (std::strcmp(data + dirents[a].name_offset, name.c_str()) == 0) {
-        return dirents[a].node_offset;
+    if (std::strcmp(data + ents[a].name_offset, name) == 0) {
+        return ents[a].data_offset;
     }
     return 0;
 }
