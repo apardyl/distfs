@@ -8,8 +8,8 @@ cc_library(
     deps = [
         "//meta:distfs-meta",
         "//data:distfs-data",
+        "//fuse:distfs-fuse",
         "@com_github_lz4//:lz4",
-        "@com_github_libfuse//:libfuse",
     ],
 )
 

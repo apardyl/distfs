@@ -7,6 +7,7 @@ enum class ErrorCode {
     ACCESS_DENIED,
     TOO_LONG,
     NO_DATA,
+    BAD_TYPE,
     NOT_IMPLEMENTED
 };
 

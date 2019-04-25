@@ -15,13 +15,13 @@ class MetaFSBuilder {
     uint32_t data_size;
     uint32_t current_pos = 0;
 
-    void set_stat(const struct stat &st, Node *n);
+    static void set_stat(const struct stat &st, Node *n);
 
     void add_xattrs(const Xattrs &xattrs);
 
-    void read_xattrs(const std::string &path, Xattrs *xattrs);
+    static void read_xattrs(const std::string &path, Xattrs *xattrs);
 
-    uint32_t xattrs_len(const Xattrs& xattrs);
+    static uint32_t xattrs_len(const Xattrs &xattrs);
 
     uint32_t add_file(const struct stat &st, const Xattrs &xattrs);
 
@@ -37,7 +37,7 @@ class MetaFSBuilder {
     uint32_t scan_dfs(const std::string &path);
 
 public:
-    explicit MetaFSBuilder(const std::string &root_path);
+    explicit MetaFSBuilder(std::string root_path);
 
     std::tuple<std::unique_ptr<char>, uint32_t> create();
 };

@@ -1,9 +1,11 @@
+#include <utility>
+
 #include "chunk_store.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <dirent.h>
 
-ChunkStore::ChunkStore(const std::string &store_path) : base_path(store_path) {
+ChunkStore::ChunkStore(std::string store_path) : base_path(std::move(store_path)) {
 }
 
 void ChunkStore::id_to_path(uint32_t id, char *path_buf) {

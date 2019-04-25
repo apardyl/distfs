@@ -34,7 +34,7 @@ cc_library(
         "FUSE_USE_VERSION=34",
     ],
     linkstatic = True,
-    linkopts = ["-ldl"],
+    linkopts = ["-ldl", "-pthread"],
 )
 
 genrule(

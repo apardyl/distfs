@@ -1,3 +1,5 @@
+#include <utility>
+
 #include <cstring>
 #include <dirent.h>
 #include <fcntl.h>
@@ -9,7 +11,7 @@
 
 #define ISSUPPORTED(mode) (S_ISLNK(mode) || S_ISREG(mode) || S_ISDIR(mode))
 
-MetaFSBuilder::MetaFSBuilder(const std::string &root_path) : root_path(root_path) {
+MetaFSBuilder::MetaFSBuilder(std::string root_path) : root_path(std::move(root_path)) {
     data = new char[CHUNK_SIZE_BYTES];
     data_size = CHUNK_SIZE_BYTES;
 }
