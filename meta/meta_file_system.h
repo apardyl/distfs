@@ -13,20 +13,20 @@ class MetaFileSystem {
 private:
     char *data;
 
-    std::tuple <ErrorCode, uint32_t> get_node_offset(const char *path) const;
+    std::tuple <ErrorCode, usize> get_node_offset(const char *path) const;
 
-    void get_stat(uint32_t offset, struct stat *st) const;
+    void get_stat(usize offset, struct stat *st) const;
 
-    uint32_t get_child(uint32_t offset, const std::string &name) const;
+    usize get_child(usize offset, const std::string &name) const;
 
-    uint32_t find_entity(const char *name, const Entry *ents, uint32_t ents_size) const;
+    usize find_entity(const char *name, const Entry *ents, uint32_t ents_size) const;
 
 public:
     explicit MetaFileSystem(char *data);
 
     void set_data(char *fs_data);
 
-    ErrorCode get_file_position(const char *path, uint32_t *file_offset, uint32_t *file_length) const;
+    ErrorCode get_file_position(const char *path, usize *file_offset, usize *file_length) const;
 
     ErrorCode get_symlink(const char *path, size_t buff_size, char *buff) const;
 

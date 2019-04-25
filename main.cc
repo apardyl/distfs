@@ -15,13 +15,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << y << std::endl;
 
-    run_fuse(argc, argv, &fs);
-//    // fs.get_dir("/bin", [](const char *p, const struct stat *s) -> void { printf("%s\n", p); });
-//    char buff[XATTR_SIZE_MAX];
-//    ssize_t s;
-//    //fs.list_xattr("/tcslinux.sh", buff, XATTR_SIZE_MAX, &s);
-//    fs.get_xattr("/tcslinux.sh", "user.xdg.origin.url", buff, XATTR_SIZE_MAX, &s);
-//    std::cout << std::string(buff, s) << std::endl;
+    run_fuse(argv[1], false, &fs);
 
     return 0;
 }

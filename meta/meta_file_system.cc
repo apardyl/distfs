@@ -8,7 +8,7 @@ void MetaFileSystem::set_data(char *fs_data) {
     this->data = fs_data;
 }
 
-ErrorCode MetaFileSystem::get_file_position(const char *path, uint32_t *file_offset, uint32_t *file_length) const {
+ErrorCode MetaFileSystem::get_file_position(const char *path, usize *file_offset, usize *file_length) const {
     auto[code, offset] = get_node_offset(path);
     if (code == ErrorCode::OK) {
         Node *n = reinterpret_cast<Node *>(offset + data);
@@ -98,23 +98,23 @@ MetaFileSystem::get_xattr(const char *path, const char *name, void *value, size_
         Node *n = reinterpret_cast<Node *>(offset + data);
         offset += sizeof(Node);
         auto *entries = reinterpret_cast<Entry *>(data + offset);
-        uint32_t data_offset = find_entity(name, entries, n->xattrs_count);
+        usize data_offset = find_entity(name, entries, n->xattrs_count);
         if (data_offset == 0) {
             return ErrorCode::NO_DATA;
         }
-        uint32_t data_size = *reinterpret_cast<uint32_t *>(data + data_offset);
+        usize data_size = *reinterpret_cast<usize *>(data + data_offset);
         *length = data_size;
         if (buff_size > 0) {
             if (data_size > buff_size) {
                 return ErrorCode::TOO_LONG;
             }
-            memcpy(value, data + data_offset + sizeof(uint32_t), data_size);
+            memcpy(value, data + data_offset + sizeof(usize), data_size);
         }
     }
     return code;
 }
 
-void MetaFileSystem::get_stat(uint32_t offset, struct stat *st) const {
+void MetaFileSystem::get_stat(usize offset, struct stat *st) const {
     Node *n = reinterpret_cast<Node *>(offset + data);
     st->st_mode = n->mode;
     st->st_nlink = S_ISDIR(n->mode) ? 2 : 1;
@@ -131,12 +131,12 @@ void MetaFileSystem::get_stat(uint32_t offset, struct stat *st) const {
 }
 
 
-std::tuple<ErrorCode, uint32_t> MetaFileSystem::get_node_offset(const char *path) const {
+std::tuple<ErrorCode, usize> MetaFileSystem::get_node_offset(const char *path) const {
     if (*path != '/') {
         throw std::runtime_error("invalid path: " + std::string(path));
     }
     // Skip metadata size
-    uint32_t offset = sizeof(uint32_t);
+    usize offset = sizeof(usize);
     path++;
     std::string name;
     for (; *path != '\0'; path++) {
@@ -163,19 +163,21 @@ std::tuple<ErrorCode, uint32_t> MetaFileSystem::get_node_offset(const char *path
     return std::make_tuple(ErrorCode::OK, offset);
 }
 
-uint32_t MetaFileSystem::get_child(uint32_t offset, const std::string &name) const {
+usize MetaFileSystem::get_child(usize offset, const std::string &name) const {
     Node *n = reinterpret_cast<Node *>(offset + data);
     if (!S_ISDIR(n->mode)) {
         return 0;
     }
     auto *dirents = reinterpret_cast<Entry *>(offset + data + sizeof(Node));
 
-    return find_entity(name.c_str(), dirents, n->length);
+    return find_entity(name.c_str(), dirents, static_cast<uint32_t>(n->length));
 }
 
-uint32_t MetaFileSystem::find_entity(const char *name, const Entry *ents, uint32_t ents_size) const {
+usize MetaFileSystem::find_entity(const char *name, const Entry *ents, uint32_t ents_size) const {
+    if (ents_size == 0) {
+        return 0;
+    }
     int a = 0, b = ents_size - 1;
-
     while (a < b) {
         int m = (a + b) / 2;
         int x = std::strcmp(data + ents[m].name_offset, name);

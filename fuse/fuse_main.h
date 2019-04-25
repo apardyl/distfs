@@ -3,7 +3,7 @@
 
 #include "../meta/meta_file_system.h"
 
-int run_fuse(int argc, char *argv[], MetaFileSystem *metaFileSystem);
+int run_fuse(char *mount_path, bool single_thread, MetaFileSystem *metaFileSystem);
 
 
 #endif //DISTFS_FUSE_MAIN_H

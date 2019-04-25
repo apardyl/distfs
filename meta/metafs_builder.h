@@ -12,8 +12,8 @@ using Xattrs = std::vector<std::pair<std::string, std::string>>;
 class MetaFSBuilder {
     std::string root_path;
     char *data;
-    uint32_t data_size;
-    uint32_t current_pos = 0;
+    usize data_size;
+    usize current_pos = 0;
 
     static void set_stat(const struct stat &st, Node *n);
 
@@ -21,25 +21,25 @@ class MetaFSBuilder {
 
     static void read_xattrs(const std::string &path, Xattrs *xattrs);
 
-    static uint32_t xattrs_len(const Xattrs &xattrs);
+    static usize xattrs_len(const Xattrs &xattrs);
 
-    uint32_t add_file(const struct stat &st, const Xattrs &xattrs);
+    usize add_file(const struct stat &st, const Xattrs &xattrs);
 
-    uint32_t add_link(const struct stat &st, const char *target, const Xattrs &xattrs);
+    usize add_link(const struct stat &st, const char *target, const Xattrs &xattrs);
 
-    std::tuple<uint32_t, uint32_t>
+    std::tuple<usize, usize>
     add_dir(const struct stat &st, const std::vector<std::string> &sorted_entries, const Xattrs &xattrs);
 
-    void set_dirent_node_offset(uint32_t dirent_pos, int pos, uint32_t value);
+    void set_dirent_node_offset(usize dirent_pos, int pos, usize value);
 
-    void reserve_buffer(uint32_t length);
+    void reserve_buffer(usize length);
 
-    uint32_t scan_dfs(const std::string &path);
+    usize scan_dfs(const std::string &path);
 
 public:
     explicit MetaFSBuilder(std::string root_path);
 
-    std::tuple<std::unique_ptr<char>, uint32_t> create();
+    std::tuple<std::unique_ptr<char>, usize> create();
 };
 
 

@@ -3,6 +3,8 @@
 
 #include <cstdint>
 
+typedef uint64_t usize;
+
 struct Node {
     uint32_t mode;
     uint32_t uid;
@@ -13,13 +15,13 @@ struct Node {
     uint64_t ctime_ns;
 
     uint32_t xattrs_count;
-    uint32_t length;
-    uint32_t data_offset;
+    usize length;
+    usize data_offset;
 };
 
 struct Entry {
-    uint32_t name_offset;
-    uint32_t data_offset;
+    usize name_offset;
+    usize data_offset;
 };
 
 #endif //DISTFS_TYPES_H
