@@ -6,6 +6,7 @@ cc_library(
     hdrs = glob(["**/*.h"]),
     deps = [
         "//common:distfs-common",
+        "//meta:distfs-meta",
         "@com_github_lz4//:lz4",
     ],
 )

@@ -6,6 +6,7 @@
 #include "../common/error_code.h"
 #include "types.h"
 #include <sys/stat.h>
+#include <functional>
 
 using Xattrs = std::vector<std::pair<std::string, std::string>>;
 
@@ -39,7 +40,11 @@ class MetaFSBuilder {
 public:
     explicit MetaFSBuilder(std::string root_path);
 
-    std::tuple<std::unique_ptr<char>, usize> create();
+    std::tuple<std::unique_ptr<char>, usize> build();
+
+    void set_file_offsets(const std::function<std::pair<usize, usize>(const char *)> &offset_provider);
+
+    usize size();
 };
 
 

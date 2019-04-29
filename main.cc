@@ -8,7 +8,7 @@
 
 int main(int argc, char *argv[]) {
     MetaFSBuilder builder("/home/adam");
-    auto[x, y] = builder.create();
+    auto[x, y] = builder.build();
     char *f = x.get();
 
     MetaFileSystem fs(f);

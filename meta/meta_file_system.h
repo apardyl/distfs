@@ -11,7 +11,7 @@
 
 class MetaFileSystem {
 private:
-    char *data;
+    const char *data;
 
     std::tuple <ErrorCode, usize> get_node_offset(const char *path) const;
 
@@ -22,9 +22,9 @@ private:
     usize find_entity(const char *name, const Entry *ents, uint32_t ents_size) const;
 
 public:
-    explicit MetaFileSystem(char *data);
+    explicit MetaFileSystem(const char *data);
 
-    void set_data(char *fs_data);
+    void set_data(const char *fs_data);
 
     ErrorCode get_file_position(const char *path, usize *file_offset, usize *file_length) const;
 

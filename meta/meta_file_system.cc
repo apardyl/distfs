@@ -1,17 +1,17 @@
 #include "meta_file_system.h"
 #include <cstring>
 
-MetaFileSystem::MetaFileSystem(char *data) : data(data) {
+MetaFileSystem::MetaFileSystem(const char *data) : data(data) {
 }
 
-void MetaFileSystem::set_data(char *fs_data) {
+void MetaFileSystem::set_data(const char *fs_data) {
     this->data = fs_data;
 }
 
 ErrorCode MetaFileSystem::get_file_position(const char *path, usize *file_offset, usize *file_length) const {
     auto[code, offset] = get_node_offset(path);
     if (code == ErrorCode::OK) {
-        Node *n = reinterpret_cast<Node *>(offset + data);
+        const Node *n = reinterpret_cast<const Node *>(offset + data);
         if (!S_ISREG(n->mode)) {
             return ErrorCode::BAD_TYPE;
         }
@@ -24,7 +24,7 @@ ErrorCode MetaFileSystem::get_file_position(const char *path, usize *file_offset
 ErrorCode MetaFileSystem::get_symlink(const char *path, size_t buff_size, char *buff) const {
     auto[code, offset] = get_node_offset(path);
     if (code == ErrorCode::OK) {
-        Node *n = reinterpret_cast<Node *>(offset + data);
+        const Node *n = reinterpret_cast<const Node *>(offset + data);
         if (!S_ISLNK(n->mode)) {
             return ErrorCode::BAD_TYPE;
         }
@@ -50,11 +50,11 @@ MetaFileSystem::get_dir(const char *path, uint32_t start_at,
                         const std::function<bool(const char *, const struct stat *)> &dir_reader) const {
     auto[code, offset] = get_node_offset(path);
     if (code == ErrorCode::OK) {
-        Node *n = reinterpret_cast<Node *>(offset + data);
+        const Node *n = reinterpret_cast<const Node *>(offset + data);
         if (!S_ISDIR(n->mode)) {
             return ErrorCode::BAD_TYPE;
         }
-        auto *dirents = reinterpret_cast<Entry *>(n->data_offset + data);
+        auto *dirents = reinterpret_cast<const Entry *>(n->data_offset + data);
         for (unsigned i = start_at; i < n->length; i++) {
             struct stat st{};
             get_stat(dirents[i].data_offset, &st);
@@ -70,9 +70,9 @@ MetaFileSystem::get_dir(const char *path, uint32_t start_at,
 ErrorCode MetaFileSystem::list_xattr(const char *path, char *list, size_t buff_size, ssize_t *length) const {
     auto[code, offset] = get_node_offset(path);
     if (code == ErrorCode::OK) {
-        Node *n = reinterpret_cast<Node *>(offset + data);
+        const Node *n = reinterpret_cast<const Node *>(offset + data);
         offset += sizeof(Node);
-        auto *entries = reinterpret_cast<Entry *>(data + offset);
+        auto *entries = reinterpret_cast<const Entry *>(data + offset);
         *length = 0;
         for (unsigned i = 0; i < n->xattrs_count; i++) {
             size_t res = strlen(data + entries[i].name_offset) + 1;
@@ -95,14 +95,14 @@ ErrorCode
 MetaFileSystem::get_xattr(const char *path, const char *name, void *value, size_t buff_size, ssize_t *length) const {
     auto[code, offset] = get_node_offset(path);
     if (code == ErrorCode::OK) {
-        Node *n = reinterpret_cast<Node *>(offset + data);
+        const Node *n = reinterpret_cast<const Node *>(offset + data);
         offset += sizeof(Node);
-        auto *entries = reinterpret_cast<Entry *>(data + offset);
+        auto *entries = reinterpret_cast<const Entry *>(data + offset);
         usize data_offset = find_entity(name, entries, n->xattrs_count);
         if (data_offset == 0) {
             return ErrorCode::NO_DATA;
         }
-        usize data_size = *reinterpret_cast<usize *>(data + data_offset);
+        usize data_size = *reinterpret_cast<const usize *>(data + data_offset);
         *length = data_size;
         if (buff_size > 0) {
             if (data_size > buff_size) {
@@ -115,7 +115,7 @@ MetaFileSystem::get_xattr(const char *path, const char *name, void *value, size_
 }
 
 void MetaFileSystem::get_stat(usize offset, struct stat *st) const {
-    Node *n = reinterpret_cast<Node *>(offset + data);
+    const Node *n = reinterpret_cast<const Node *>(offset + data);
     st->st_mode = n->mode;
     st->st_nlink = S_ISDIR(n->mode) ? 2 : 1;
     st->st_uid = n->uid;
@@ -164,11 +164,11 @@ std::tuple<ErrorCode, usize> MetaFileSystem::get_node_offset(const char *path) c
 }
 
 usize MetaFileSystem::get_child(usize offset, const std::string &name) const {
-    Node *n = reinterpret_cast<Node *>(offset + data);
+    const Node *n = reinterpret_cast<const Node *>(offset + data);
     if (!S_ISDIR(n->mode)) {
         return 0;
     }
-    auto *dirents = reinterpret_cast<Entry *>(offset + data + sizeof(Node));
+    auto *dirents = reinterpret_cast<const Entry *>(offset + data + sizeof(Node));
 
     return find_entity(name.c_str(), dirents, static_cast<uint32_t>(n->length));
 }
