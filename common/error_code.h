@@ -8,6 +8,7 @@ enum class ErrorCode {
     TOO_LONG,
     NO_DATA,
     BAD_TYPE,
+    INTERNAL_ERROR,
     NOT_IMPLEMENTED
 };
 

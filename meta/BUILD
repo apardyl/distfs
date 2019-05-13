@@ -6,5 +6,6 @@ cc_library(
     hdrs = glob(["**/*.h"]),
     deps = [
         "//common:distfs-common",
+        "//data:distfs-data",
     ],
 )

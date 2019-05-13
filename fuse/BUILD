@@ -7,6 +7,7 @@ cc_library(
     deps = [
         "//common:distfs-common",
         "//meta:distfs-meta",
+        "//data:distfs-data",
         "@com_github_libfuse//:libfuse",
     ],
 )

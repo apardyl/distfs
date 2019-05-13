@@ -2,8 +2,7 @@
 #define DISTFS_TYPES_H
 
 #include <cstdint>
-
-typedef uint64_t usize;
+#include "../common/consts.h"
 
 struct Node {
     uint32_t mode;

@@ -3,14 +3,37 @@
 
 
 #include "chunk_store.h"
-#include "../meta/meta_file_system.h"
+#include "../common/consts.h"
 
 class ChunkBuilder {
     ChunkStore &store;
+
+    bool built = false;
+
+    usize pos = 0;
+
+    char *buff;
+
+    char *read_buffer;
+
+    uint32_t chunk_num = 0;
+
+    ErrorCode move_pos(usize new_offset);
+
+    ErrorCode write_data(const char *data, usize length);
+
 public:
     explicit ChunkBuilder(ChunkStore &store);
 
-    ErrorCode build(const char *meta_fs_data);
+    virtual ~ChunkBuilder();
+
+    ErrorCode add_file(const std::string &path, usize *offset, usize *length);
+
+    ErrorCode reserve(usize length, usize *offset);
+
+    ErrorCode write(usize offset, const char *data, usize length);
+
+    ErrorCode build();
 };
 
 

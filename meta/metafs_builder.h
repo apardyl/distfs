@@ -5,15 +5,16 @@
 #include <vector>
 #include "../common/error_code.h"
 #include "types.h"
+#include "../data/chunk_builder.h"
 #include <sys/stat.h>
 #include <functional>
 
 using Xattrs = std::vector<std::pair<std::string, std::string>>;
 
 class MetaFSBuilder {
-    std::string root_path;
-    char *data;
-    usize data_size;
+    std::string root_path = "";
+    char *data = nullptr;
+    usize data_size = 0;
     usize current_pos = 0;
 
     static void set_stat(const struct stat &st, Node *n);
@@ -37,14 +38,12 @@ class MetaFSBuilder {
 
     usize scan_dfs(const std::string &path);
 
+    ErrorCode create_chunks(ChunkBuilder &chunkBuilder);
+
 public:
     explicit MetaFSBuilder(std::string root_path);
 
-    std::tuple<std::unique_ptr<char>, usize> build();
-
-    void set_file_offsets(const std::function<std::pair<usize, usize>(const char *)> &offset_provider);
-
-    usize size();
+    ErrorCode build(ChunkBuilder &chunkBuilder);
 };
 
 

@@ -7,6 +7,7 @@
 #include <fuse.h>
 
 static MetaFileSystem *mfs;
+static DataProvider *dp;
 
 static void *distfs_init(struct fuse_conn_info *conn, struct fuse_config *cfg) {
     cfg->auto_cache = 1;
@@ -92,8 +93,9 @@ static int distfs_release(const char *path, struct fuse_file_info *fi) {
     return 0;
 }
 
-int run_fuse(char *mount_path, bool single_thread, MetaFileSystem *metaFileSystem) {
+int run_fuse(char *mount_path, bool single_thread, MetaFileSystem *metaFileSystem, DataProvider *dataProvider) {
     mfs = metaFileSystem;
+    dp = dataProvider;
     umask(0);
 
     fuse_operations operations{};

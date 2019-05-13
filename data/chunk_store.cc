@@ -1,9 +1,12 @@
 #include <utility>
 
 #include "chunk_store.h"
+#include "../common/consts.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <dirent.h>
+#include <sys/stat.h>
+#include <cstring>
 
 ChunkStore::ChunkStore(std::string store_path) : base_path(std::move(store_path)) {
 }
@@ -12,7 +15,7 @@ void ChunkStore::id_to_path(uint32_t id, char *path_buf) {
     snprintf(path_buf, PATH_MAX, "%s/%X/%X/%X", base_path.c_str(), id & 0xFF, (id >> 8) & 0xFF, id);
 }
 
-ErrorCode ChunkStore::read_chunk(uint32_t id, char *buffer, uint32_t size) {
+ErrorCode ChunkStore::read_chunk(uint32_t id, char *buffer, uint32_t *size) {
     char buf[PATH_MAX];
     id_to_path(id, buf);
     int fd = open(buf, O_RDONLY);
@@ -20,18 +23,21 @@ ErrorCode ChunkStore::read_chunk(uint32_t id, char *buffer, uint32_t size) {
         if (errno == ENOENT) {
             return ErrorCode::NOT_FOUND;
         }
-        return ErrorCode::ACCESS_DENIED;
+        return ErrorCode::INTERNAL_ERROR;
     }
 
     ssize_t res = 0;
+    *size = 0;
+    uint32_t max_size = CHUNK_SIZE_BYTES;
     do {
-        res = read(fd, buffer, size);
-        size -= res;
+        res = read(fd, buffer, max_size);
+        max_size -= res;
         buffer += res;
-    } while (size > 0 && res > 0);
+        *size += res;
+    } while (max_size > 0 && res > 0);
     if (res == -1) {
         close(fd);
-        return ErrorCode::ACCESS_DENIED;
+        return ErrorCode::INTERNAL_ERROR;
     }
     close(fd);
     return ErrorCode::OK;
@@ -40,9 +46,16 @@ ErrorCode ChunkStore::read_chunk(uint32_t id, char *buffer, uint32_t size) {
 ErrorCode ChunkStore::write_chunk(uint32_t id, char *buffer, uint32_t size) {
     char buf[PATH_MAX];
     id_to_path(id, buf);
+
+    auto err = create_base_dir(buf);
+    if (err != ErrorCode::OK) {
+        return err;
+    }
+
     int fd = open(buf, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
     if (fd == -1) {
-        return ErrorCode::ACCESS_DENIED;
+        printf("%d\n", errno);
+        return ErrorCode::INTERNAL_ERROR;
     }
     ssize_t res = 0;
     do {
@@ -52,9 +65,10 @@ ErrorCode ChunkStore::write_chunk(uint32_t id, char *buffer, uint32_t size) {
     } while (size > 0 && res > 0);
     if (res == -1) {
         close(fd);
-        return ErrorCode::ACCESS_DENIED;
+        return ErrorCode::INTERNAL_ERROR;
     }
     close(fd);
+    in_store.insert(id);
     return ErrorCode::OK;
 }
 
@@ -65,7 +79,31 @@ ErrorCode ChunkStore::remove_chunk(uint32_t id) {
         if (errno == ENOENT) {
             return ErrorCode::NOT_FOUND;
         }
-        return ErrorCode::ACCESS_DENIED;
+        return ErrorCode::INTERNAL_ERROR;
+    }
+    in_store.erase(id);
+    return ErrorCode::OK;
+}
+
+const std::set<uint32_t> &ChunkStore::available() const {
+    return in_store;
+}
+
+ErrorCode ChunkStore::create_base_dir(const char *path_buf) {
+    char buff[FILENAME_MAX];
+    char *b = buff;
+    while (path_buf != nullptr) {
+        const char *next = strchr(path_buf + 1, '/');
+        if (next != nullptr) {
+            strncpy(b, path_buf, next - path_buf);
+            b += next - path_buf;
+            *b = '\0';
+            int res = mkdir(buff, S_IRWXU);
+            if (res != 0 && errno != EEXIST) {
+                return ErrorCode::INTERNAL_ERROR;
+            }
+        }
+        path_buf = next;
     }
     return ErrorCode::OK;
 }

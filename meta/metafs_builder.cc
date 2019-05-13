@@ -13,22 +13,6 @@
 #define ISSUPPORTED(mode) (S_ISLNK(mode) || S_ISREG(mode) || S_ISDIR(mode))
 
 MetaFSBuilder::MetaFSBuilder(std::string root_path) : root_path(std::move(root_path)) {
-    data = new char[CHUNK_SIZE_BYTES];
-    data_size = CHUNK_SIZE_BYTES;
-
-    // leave place for metadata length
-    current_pos = sizeof(usize);
-    scan_dfs(root_path);
-    // write length
-    *(reinterpret_cast<usize *>(data)) = current_pos;
-}
-
-std::tuple<std::unique_ptr<char>, usize> MetaFSBuilder::build() {
-    auto a = std::make_tuple(std::unique_ptr<char>(data), current_pos);
-    data = nullptr;
-    data_size = 0;
-    current_pos = 0;
-    return a;
 }
 
 void MetaFSBuilder::reserve_buffer(usize length) {
@@ -202,28 +186,60 @@ usize MetaFSBuilder::xattrs_len(const Xattrs &xattrs) {
     return sum;
 }
 
-void MetaFSBuilder::set_file_offsets(
-        const std::function<std::pair<usize, usize>(const char *)> &offset_and_length_provider) {
+ErrorCode MetaFSBuilder::create_chunks(ChunkBuilder &chunkBuilder) {
+    usize data_of;
+    auto err = chunkBuilder.reserve(current_pos, &data_of);
+    if (err != ErrorCode::OK) {
+        return err;
+    }
+
     std::queue<std::pair<usize, std::string>> Q;
-    Q.emplace(sizeof(usize), "");
+    Q.emplace(sizeof(usize), root_path);
 
     while (!Q.empty()) {
         auto a = Q.front();
         Q.pop();
         Node *n = reinterpret_cast<Node *>(data + a.first);
         if (S_ISREG(n->mode)) {
-            auto[data_offset, length] = offset_and_length_provider(a.second.c_str());
-            n->data_offset = data_offset;
-            n->length = length;
+            n->data_offset = -1;
+            n->length = 0;
+            err = chunkBuilder.add_file(a.second, &(n->data_offset), &(n->length));
+            if (err != ErrorCode::OK) {
+                n->data_offset = -1;
+                n->length = 0;
+                if (err != ErrorCode::NOT_FOUND && err != ErrorCode::ACCESS_DENIED) {
+                    return err;
+                }
+            }
         } else if (S_ISDIR(n->mode)) {
             auto dirent = reinterpret_cast<Entry *>(data + n->data_offset);
             for (usize i = 0; i < n->length; i++) {
-                Q.emplace(dirent->data_offset, a.second + "/" + std::string(data + dirent->name_offset));
+                Q.emplace(dirent[i].data_offset, a.second + "/" + std::string(data + dirent[i].name_offset));
             }
         }
     }
+
+    chunkBuilder.write(data_of, data, current_pos);
+    return ErrorCode::OK;
 }
 
-usize MetaFSBuilder::size() {
-    return data_size;
+ErrorCode MetaFSBuilder::build(ChunkBuilder &chunkBuilder) {
+    data = new char[CHUNK_SIZE_BYTES];
+    data_size = CHUNK_SIZE_BYTES;
+
+    // leave place for metadata length
+    current_pos = sizeof(usize);
+    scan_dfs(root_path);
+    // write length
+    *(reinterpret_cast<usize *>(data)) = current_pos;
+
+    auto err = create_chunks(chunkBuilder);
+    if (err == ErrorCode::OK) {
+        chunkBuilder.build();
+    }
+
+    data = nullptr;
+    data_size = 0;
+    current_pos = 0;
+    return err;
 }

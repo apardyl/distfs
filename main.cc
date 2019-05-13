@@ -2,20 +2,22 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <limits.h>
-#include "fuse/fuse_main.h"
+//#include "fuse/fuse_main.h"
 #include "meta/metafs_builder.h"
 #include "meta/meta_file_system.h"
 
 int main(int argc, char *argv[]) {
-    MetaFSBuilder builder("/home/adam");
-    auto[x, y] = builder.build();
-    char *f = x.get();
+    ChunkStore store("/tmp/lol");
+    ChunkBuilder chunkBuilder(store);
+    MetaFSBuilder builder("/usr/bin");
 
-    MetaFileSystem fs(f);
+    auto err = builder.build(chunkBuilder);
+    if (err == ErrorCode::OK) {
+        std::cout << "OK\n";
+    } else {
+        std::cout << "ERR\n";
+    }
 
-    std::cout << y << std::endl;
-
-    run_fuse(argv[1], false, &fs);
 
     return 0;
 }
