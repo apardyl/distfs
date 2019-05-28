@@ -4,7 +4,7 @@
 #include "chunk_builder.h"
 
 
-ChunkBuilder::ChunkBuilder(ChunkStore &store) : store(store) {
+ChunkBuilder::ChunkBuilder(ChunkStore &store) : store(CompressedStore(store)) {
     buff = new char[CHUNK_SIZE_BYTES];
     read_buffer = new char[CHUNK_SIZE_BYTES];
 }
@@ -12,6 +12,7 @@ ChunkBuilder::ChunkBuilder(ChunkStore &store) : store(store) {
 ErrorCode ChunkBuilder::add_file(const std::string &path, usize *offset, usize *length) {
     *offset = 0;
     *length = 0;
+    usize p = pos;
     int fd = open(path.c_str(), O_RDONLY);
     if (fd == -1) {
         if (errno == ENOENT) {
@@ -45,6 +46,7 @@ ErrorCode ChunkBuilder::add_file(const std::string &path, usize *offset, usize *
         return ErrorCode::ACCESS_DENIED;
     }
     close(fd);
+    *offset = p;
     return ErrorCode::OK;
 }
 

@@ -4,9 +4,10 @@
 
 #include "chunk_store.h"
 #include "../common/consts.h"
+#include "compressed_store.h"
 
 class ChunkBuilder {
-    ChunkStore &store;
+    CompressedStore store;
 
     bool built = false;
 

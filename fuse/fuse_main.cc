@@ -81,16 +81,31 @@ static int distfs_listattr(const char *path, char *list, size_t size) {
 }
 
 static int distfs_open(const char *path, struct fuse_file_info *fi) {
-    return -EACCES;
+    if ((fi->flags & (O_WRONLY | O_RDWR)) != 0) {
+        errno = EACCES;
+        return -1;
+    }
+    usize off;
+    auto err = mfs->get_offset(path, &off);
+    fi->fh = off;
+    if (err == ErrorCode::OK) {
+        return 0;
+    }
+    return -ENOENT;
 }
 
 static int distfs_read(const char *path, char *buf, size_t size, off_t offset,
                        struct fuse_file_info *fi) {
+    usize off, len;
+    auto err = mfs->get_file_position(fi->fh, &off, &len);
+    if (err != ErrorCode::OK) {
+        return -EACCES;
+    }
+    err = dp->read(off + offset, buf, std::min(len - offset, size));
+    if (err == ErrorCode::OK) {
+        return std::min(len - offset, size);
+    }
     return -EACCES;
-}
-
-static int distfs_release(const char *path, struct fuse_file_info *fi) {
-    return 0;
 }
 
 int run_fuse(char *mount_path, bool single_thread, MetaFileSystem *metaFileSystem, DataProvider *dataProvider) {
@@ -105,7 +120,6 @@ int run_fuse(char *mount_path, bool single_thread, MetaFileSystem *metaFileSyste
     operations.readdir = distfs_readdir;
     operations.open = distfs_open;
     operations.read = distfs_read;
-    operations.release = distfs_release;
     operations.getxattr = distfs_getxattr;
     operations.listxattr = distfs_listattr;
 

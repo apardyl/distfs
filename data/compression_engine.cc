@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 int CompressionEngine::compress(char *dest, int dest_max_size, char *src, int src_size) {
-    return LZ4_compress_HC(src, dest, src_size, dest_max_size, LZ4HC_CLEVEL_DEFAULT);
+    return LZ4_compress_default(src, dest, src_size, dest_max_size);
 }
 
 int CompressionEngine::decompress(char *dest, int dest_max_size, char *src, int src_size) {

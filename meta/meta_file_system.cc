@@ -1,22 +1,22 @@
+#include <memory>
+
 #include "meta_file_system.h"
 #include <cstring>
 
-MetaFileSystem::MetaFileSystem(const char *data) : data(data) {
-}
-
-void MetaFileSystem::set_data(const char *fs_data) {
-    this->data = fs_data;
+ErrorCode MetaFileSystem::get_file_position(usize offset, usize *file_offset, usize *file_length) const {
+    const Node *n = reinterpret_cast<const Node *>(offset + data);
+    if (!S_ISREG(n->mode)) {
+        return ErrorCode::BAD_TYPE;
+    }
+    *file_offset = n->data_offset;
+    *file_length = n->length;
+    return ErrorCode::OK;
 }
 
 ErrorCode MetaFileSystem::get_file_position(const char *path, usize *file_offset, usize *file_length) const {
     auto[code, offset] = get_node_offset(path);
     if (code == ErrorCode::OK) {
-        const Node *n = reinterpret_cast<const Node *>(offset + data);
-        if (!S_ISREG(n->mode)) {
-            return ErrorCode::BAD_TYPE;
-        }
-        *file_offset = n->data_offset;
-        *file_length = n->length;
+        get_file_position(offset, file_offset, file_length);
     }
     return code;
 }
@@ -193,4 +193,23 @@ usize MetaFileSystem::find_entity(const char *name, const Entry *ents, uint32_t 
         return ents[a].data_offset;
     }
     return 0;
+}
+
+ErrorCode MetaFileSystem::get_offset(const char *path, usize *offset) {
+    auto[code, off] = get_node_offset(path);
+    *offset = off;
+    return code;
+}
+
+MetaFileSystem::MetaFileSystem(std::shared_ptr<char> data) : data_ptr(std::move(data)), data(data_ptr.get()) {
+}
+
+MetaFileSystem::MetaFileSystem(DataProvider &dataProvider) {
+    char buf[sizeof(usize)];
+    dataProvider.read(0, buf, sizeof(usize));
+    usize size = *reinterpret_cast<usize *>(buf);
+    auto d = new char[size];
+    dataProvider.read(0, d, size);
+    data_ptr = std::shared_ptr<char>(d);
+    data = data_ptr.get();
 }

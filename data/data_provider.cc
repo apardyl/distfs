@@ -7,7 +7,11 @@ ErrorCode DataProvider::read(usize offset, char *buffer, usize length) {
     usize of = offset % CHUNK_SIZE_BYTES;
     while (length > 0) {
         usize len = std::min(length, static_cast<usize>(CHUNK_SIZE_BYTES));
-        auto err = chunkProvider.read_chunk(id, buffer, of, len);
+        uint32_t read_size;
+        auto err = chunkProvider.read_chunk(id, buffer, of, len, &read_size);
+        if (read_size != len) {
+            return ErrorCode::INTERNAL_ERROR;
+        }
         if (err != ErrorCode::OK) {
             return err;
         }

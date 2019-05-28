@@ -5,12 +5,15 @@ LruCollector::LruCollector(uint32_t size, std::function<void(uint32_t)> remover)
 }
 
 void LruCollector::update(uint32_t id) {
+    std::lock_guard<std::mutex> guard(mutex);
     auto it = iterators.find(id);
     if (it == iterators.end()) {
-        uint32_t last = queue.back();
-        queue.pop_back();
-        iterators.erase(last);
-        remover(last);
+        if (queue.size() >= size) {
+            uint32_t last = queue.back();
+            queue.pop_back();
+            iterators.erase(last);
+            remover(last);
+        }
     } else {
         iterators.erase(it);
     }

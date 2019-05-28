@@ -8,7 +8,38 @@
 #include <sys/stat.h>
 #include <cstring>
 
-ChunkStore::ChunkStore(std::string store_path) : base_path(std::move(store_path)) {
+ChunkStore::ChunkStore(std::string store_path, uint32_t size) : base_path(std::move(store_path)) {
+    DIR *d, *e, *f;
+    dirent *ent;
+    if ((d = opendir(base_path.c_str())) != nullptr) {
+        while ((ent = readdir(d)) != nullptr) {
+            auto l = base_path + '/' + std::string(ent->d_name);
+            if (strcmp(ent->d_name, ".") != 0 && strcmp(ent->d_name, "..") != 0 &&
+                (e = opendir(l.c_str())) != nullptr) {
+                while ((ent = readdir(e)) != nullptr) {
+                    auto m = l + '/' + std::string(ent->d_name);
+                    if (strcmp(ent->d_name, ".") != 0 && strcmp(ent->d_name, "..") != 0 &&
+                        (f = opendir(m.c_str())) != nullptr) {
+                        while ((ent = readdir(f)) != nullptr) {
+                            char *ptr = nullptr;
+                            uint32_t id = strtol(ent->d_name, &ptr, 16);
+                            if (strcmp(ent->d_name, ".") != 0 && strcmp(ent->d_name, "..") != 0 && ptr != nullptr &&
+                                *ptr == '\0') {
+                                in_store.insert(id);
+                            }
+                        }
+                        closedir(f);
+                    }
+                }
+                closedir(e);
+            }
+        }
+        closedir(d);
+    }
+    collector = std::make_unique<LruCollector>(size, [this](uint32_t id) -> void { this->remove_chunk(id); });
+    for (auto id : in_store) {
+        collector->update(id);
+    }
 }
 
 void ChunkStore::id_to_path(uint32_t id, char *path_buf) {
@@ -25,6 +56,8 @@ ErrorCode ChunkStore::read_chunk(uint32_t id, char *buffer, uint32_t *size) {
         }
         return ErrorCode::INTERNAL_ERROR;
     }
+
+    collector->update(id);
 
     ssize_t res = 0;
     *size = 0;
@@ -68,7 +101,11 @@ ErrorCode ChunkStore::write_chunk(uint32_t id, char *buffer, uint32_t size) {
         return ErrorCode::INTERNAL_ERROR;
     }
     close(fd);
-    in_store.insert(id);
+    collector->update(id);
+    {
+        std::lock_guard<std::mutex> guard(store_mutex);
+        in_store.insert(id);
+    }
     return ErrorCode::OK;
 }
 
@@ -81,7 +118,10 @@ ErrorCode ChunkStore::remove_chunk(uint32_t id) {
         }
         return ErrorCode::INTERNAL_ERROR;
     }
-    in_store.erase(id);
+    {
+        std::lock_guard<std::mutex> guard(store_mutex);
+        in_store.erase(id);
+    }
     return ErrorCode::OK;
 }
 

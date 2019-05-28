@@ -9,6 +9,7 @@ cc_library(
         "//meta:distfs-meta",
         "//data:distfs-data",
         "//fuse:distfs-fuse",
+        "//network:distfs-network",
     ],
 )
 

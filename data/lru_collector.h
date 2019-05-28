@@ -14,6 +14,8 @@ private:
 
     std::list<uint32_t> queue;
     std::map<uint32_t, std::list<uint32_t>::iterator> iterators;
+
+    std::mutex mutex;
 public:
     LruCollector(uint32_t size, std::function<void(uint32_t)> remover);
 

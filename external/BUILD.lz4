@@ -3,6 +3,7 @@ package(default_visibility = ["//visibility:public"])
 cc_library(
     name = "lz4",
     srcs = [
+        "lz4.c",
         "lz4hc.c",
     ],
     hdrs = [
