@@ -8,7 +8,7 @@
 #include <mutex>
 #include <memory>
 #include "../common/error_code.h"
-#include "lru_collector.h"
+#include "../common/lru_collector.h"
 
 class ChunkStore {
 private:
@@ -33,7 +33,7 @@ public:
 
     ErrorCode remove_chunk(uint32_t id);
 
-    const std::set<uint32_t> &available() const;
+    std::set<uint32_t> available() const;
 };
 
 

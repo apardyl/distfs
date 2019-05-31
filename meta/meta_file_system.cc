@@ -206,10 +206,16 @@ MetaFileSystem::MetaFileSystem(std::shared_ptr<char> data) : data_ptr(std::move(
 
 MetaFileSystem::MetaFileSystem(DataProvider &dataProvider) {
     char buf[sizeof(usize)];
-    dataProvider.read(0, buf, sizeof(usize));
+    auto err = dataProvider.read(0, buf, sizeof(usize));
+    if (err != ErrorCode::OK) {
+        throw std::logic_error("Unable to download metafs block 0");
+    }
     usize size = *reinterpret_cast<usize *>(buf);
     auto d = new char[size];
-    dataProvider.read(0, d, size);
+    err = dataProvider.read(0, d, size);
+    if (err != ErrorCode::OK) {
+        throw std::logic_error("Unable to download metafs data");
+    }
     data_ptr = std::shared_ptr<char>(d);
     data = data_ptr.get();
 }

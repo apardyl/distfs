@@ -19,7 +19,7 @@ public:
 
     ErrorCode remove_chunk(uint32_t id);
 
-    const std::set<uint32_t> &available() const;
+    std::set<uint32_t> available() const;
 };
 
 

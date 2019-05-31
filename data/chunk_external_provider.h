@@ -7,7 +7,7 @@
 
 class ChunkExternalProvider {
 public:
-    virtual ErrorCode fetch_chunk(uint32_t id, ChunkStore& store) = 0;
+    virtual ErrorCode fetch_chunk(uint32_t id) = 0;
 };
 
 #endif //DISTFS_CHUNK_EXTERNAL_PROVIDER_H

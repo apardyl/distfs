@@ -34,6 +34,6 @@ ErrorCode CompressedStore::remove_chunk(uint32_t id) {
     return chunkStore.remove_chunk(id);
 }
 
-const std::set<uint32_t> &CompressedStore::available() const {
+std::set<uint32_t> CompressedStore::available() const {
     return chunkStore.available();
 }

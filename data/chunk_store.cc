@@ -125,7 +125,7 @@ ErrorCode ChunkStore::remove_chunk(uint32_t id) {
     return ErrorCode::OK;
 }
 
-const std::set<uint32_t> &ChunkStore::available() const {
+std::set<uint32_t> ChunkStore::available() const {
     return in_store;
 }
 

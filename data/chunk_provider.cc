@@ -42,7 +42,7 @@ ErrorCode ChunkProvider::read_chunk(uint32_t id, char *buffer, uint32_t offset, 
     // Load from storage or network to cache
     auto err = compressedStore.read_chunk(id, ent->data, &ent->len);
     if (err == ErrorCode::NOT_FOUND) {
-        err = client.fetch_chunk(id, chunkStore);
+        err = client.fetch_chunk(id);
         if (err == ErrorCode::OK) {
             err = compressedStore.read_chunk(id, ent->data, &ent->len);
         }
@@ -51,6 +51,7 @@ ErrorCode ChunkProvider::read_chunk(uint32_t id, char *buffer, uint32_t offset, 
     if (err == ErrorCode::OK) {
         ent->mutex.unlock();
         memcpy(buffer, ent->data + offset, std::min(len, ent->len - offset));
+        *read_size = std::min(len, ent->len - offset);
         collector->update(id);
     } else {
         {

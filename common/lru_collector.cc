@@ -20,3 +20,7 @@ void LruCollector::update(uint32_t id) {
     queue.push_front(id);
     iterators[id] = queue.begin();
 }
+
+void LruCollector::remove(uint32_t id) {
+    iterators.erase(id);
+}

@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package distfs;
+
+service DistFS {
+    rpc GetChunk (ChunkRequest) returns (stream ChunkPartResponse);
+
+    rpc InfoExchange (Info) returns (Info);
+
+    rpc PeerExchange (PeerList) returns (PeerList);
+
+    rpc Ping (Empty) returns (Empty);
+
+    rpc GetMetadata (Empty) returns (Metadata);
+}
+
+message ChunkRequest {
+    uint32 id = 1;
+}
+
+message ChunkPartResponse {
+    bytes data = 1;
+}
+
+message Info {
+    uint64 fs_id = 1;
+
+    uint64 node_id = 2;
+
+    bytes available = 3;
+}
+
+message PeerList {
+    repeated string peer = 1;
+}
+
+message Empty {
+}
+
+message Metadata {
+    uint64 fs_id = 1;
+}

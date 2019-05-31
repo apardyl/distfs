@@ -20,6 +20,8 @@ public:
     LruCollector(uint32_t size, std::function<void(uint32_t)> remover);
 
     void update(uint32_t id);
+
+    void remove(uint32_t id);
 };
 
 
