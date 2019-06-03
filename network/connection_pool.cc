@@ -283,6 +283,10 @@ uint64_t ConnectionPool::get_fs_id() {
     return metadata.get_id();
 }
 
+const std::vector<string> & ConnectionPool::get_block_hashes() {
+    return metadata.get_hashes();
+}
+
 bool ConnectionPool::Connection::operator<(const ConnectionPool::Connection &b) const {
     return availability < b.availability;
 }

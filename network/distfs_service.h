@@ -24,11 +24,7 @@ public:
                               ::distfs::PeerList *response) override;
 
     grpc::Status
-    Ping(::grpc::ServerContext *context, const ::distfs::Empty *request, ::distfs::Empty *response) override;
-
-
-    grpc::Status
-    GetMetadata(::grpc::ServerContext * context, const ::distfs::Empty *request, ::distfs::Metadata *response) override;
+    GetMetadata(::grpc::ServerContext *context, const ::distfs::Empty *request, ::distfs::Metadata *response) override;
 };
 
 

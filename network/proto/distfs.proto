@@ -9,8 +9,6 @@ service DistFS {
 
     rpc PeerExchange (PeerList) returns (PeerList);
 
-    rpc Ping (Empty) returns (Empty);
-
     rpc GetMetadata (Empty) returns (Metadata);
 }
 
@@ -39,4 +37,6 @@ message Empty {
 
 message Metadata {
     uint64 fs_id = 1;
+
+    repeated string block_hash = 2;
 }

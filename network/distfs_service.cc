@@ -57,12 +57,6 @@ grpc::Status DistfsService::PeerExchange(::grpc::ServerContext *context, const :
     return grpc::Status::OK;
 }
 
-grpc::Status
-DistfsService::Ping(::grpc::ServerContext *context, const ::distfs::Empty *request, ::distfs::Empty *response) {
-    connectionPool.connection_from(context->peer());
-    return grpc::Status::OK;
-}
-
 DistfsService::DistfsService(ChunkStore &store, ConnectionPool &connectionPool)
         : store(store), connectionPool(connectionPool) {}
 
@@ -70,5 +64,9 @@ grpc::Status DistfsService::GetMetadata(::grpc::ServerContext *context, const ::
                                         ::distfs::Metadata *response) {
     connectionPool.connection_from(context->peer());
     response->set_fs_id(connectionPool.get_fs_id());
+    for (auto &s : connectionPool.get_block_hashes()) {
+        response->add_block_hash(s);
+    }
+
     return grpc::Status::OK;
 }

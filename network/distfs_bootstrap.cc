@@ -21,5 +21,9 @@ DistfsMetadata DistfsBootstrap::fetch_metadata(const std::string &peer) {
     if (!err.ok()) {
         throw std::logic_error("Unable to fetch metadata");
     }
-    return DistfsMetadata(peer, stub, response.fs_id());
+    std::vector<std::string> hashes;
+    for (auto &h : response.block_hash()) {
+        hashes.push_back(h);
+    }
+    return DistfsMetadata(peer, stub, response.fs_id(), std::move(hashes));
 }

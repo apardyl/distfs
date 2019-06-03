@@ -88,6 +88,8 @@ public:
     uint64_t get_node_id();
 
     uint64_t get_fs_id();
+
+    const std::vector<std::string> & get_block_hashes();
 };
 
 
