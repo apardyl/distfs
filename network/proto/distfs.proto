@@ -25,7 +25,9 @@ message Info {
 
     uint64 node_id = 2;
 
-    bytes available = 3;
+    uint32 listen_port = 3;
+
+    bytes available = 4;
 }
 
 message PeerList {

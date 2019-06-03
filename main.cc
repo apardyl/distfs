@@ -27,32 +27,35 @@ int main(int argc, char *argv[]) {
     if (argc == 4 && strcmp(argv[1], "serve") == 0) {
         ChunkStore store(argv[2]);
         DistfsMetadata metadata(store);
-        ConnectionPool connectionPool(metadata, store, 20, 200, true);
+        uint32_t listen_port = std::stoi(argv[3]);
+        ConnectionPool connectionPool(metadata, store, 20, 200, true, listen_port);
         DistfsServer server(store, connectionPool);
-        server.run_server_blocking(std::string("0.0.0.0:") + std::string(argv[3]));
+        server.run_server_blocking(std::string("0.0.0.0:") + std::to_string(listen_port));
     }
 
     if (argc == 5 && strcmp(argv[1], "mirror") == 0) {
         ChunkStore store(argv[2]);
         DistfsBootstrap distfsBootstrap;
         DistfsMetadata metadata = distfsBootstrap.fetch_metadata(argv[4]);
-        ConnectionPool connectionPool(metadata, store, 20, 200, true);
+        uint32_t listen_port = std::stoi(argv[3]);
+        ConnectionPool connectionPool(metadata, store, 20, 200, true, listen_port);
         for (uint32_t id = 0; id < metadata.get_hashes().size(); id++) {
             connectionPool.fetch_chunk(id);
         }
         DistfsServer server(store, connectionPool);
-        server.run_server_blocking(std::string("0.0.0.0:") + std::string(argv[3]));
+        server.run_server_blocking(std::string("0.0.0.0:") + std::to_string(listen_port));
     }
 
     if (argc == 7 && strcmp(argv[1], "mount") == 0) {
         ChunkStore store(argv[2], std::stoi(argv[3]));
         DistfsBootstrap distfsBootstrap;
         DistfsMetadata metadata = distfsBootstrap.fetch_metadata(argv[5]);
-        ConnectionPool connectionPool(metadata, store, 20, 200, true);
+        uint32_t listen_port = std::stoi(argv[4]);
+        ConnectionPool connectionPool(metadata, store, 20, 200, true, listen_port);
         DistfsServer server(store, connectionPool);
         auto server_thread = std::thread(
-                [&server, &argv]() -> void {
-                    server.run_server_blocking(std::string("0.0.0.0:") + std::string(argv[4]));
+                [&server, listen_port]() -> void {
+                    server.run_server_blocking(std::string("0.0.0.0:") + std::to_string(listen_port));
                 });
         ChunkProvider chunkProvider(connectionPool, store, 25);
         DataProvider dataProvider(chunkProvider);

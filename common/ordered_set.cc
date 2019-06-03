@@ -1,13 +1,15 @@
 #include "ordered_set.h"
 
-void OrderedSet::push(const std::string &str) {
+bool OrderedSet::push(const std::string &str) {
     if (data.count(str) == 0) {
         auto p = data.insert(str);
         iterators.push(p.first);
         while (data.size() > max_size) {
             pop();
         }
+        return true;
     }
+    return false;
 }
 
 std::string OrderedSet::pop() {

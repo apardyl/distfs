@@ -30,8 +30,8 @@ class ConnectionPool : public ChunkExternalProvider {
         std::shared_ptr<distfs::DistFS::Stub> stub;
         ChunkAvailability availability;
         std::string url;
-        time_t last_info;
-        time_t last_pex;
+        time_t last_info = 0;
+        time_t last_pex = 0;
 
         bool operator<(const Connection &b) const;
     };
@@ -48,6 +48,8 @@ class ConnectionPool : public ChunkExternalProvider {
 
     uint64_t node_id;
 
+    uint32_t listen_port;
+
     void worker();
 
     void worker_get_info();
@@ -59,14 +61,12 @@ class ConnectionPool : public ChunkExternalProvider {
     void worker_explore();
 
 public:
-    explicit ConnectionPool(DistfsMetadata &metadata, ChunkStore &store, uint32_t activeConnectionsLimit = 20,
-                            uint32_t peerCandidatesLimit = 200, bool active = true);
+    explicit ConnectionPool(DistfsMetadata &metadata, ChunkStore &store, uint32_t activeConnectionsLimit,
+                            uint32_t peerCandidatesLimit, bool active, uint32_t listenPort);
 
     ~ConnectionPool();
 
     ErrorCode fetch_chunk(uint32_t id) override;
-
-    void connection_from(const std::string &peer);
 
     void info_from(const std::string &peer, const ChunkAvailability &chunkAvailability);
 
@@ -94,7 +94,9 @@ public:
 
     uint64_t get_fs_id();
 
-    const std::vector<std::string> & get_block_hashes();
+    uint32_t get_listen_port();
+
+    const std::vector<std::string> &get_block_hashes();
 };
 
 

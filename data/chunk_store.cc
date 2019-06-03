@@ -36,7 +36,10 @@ ChunkStore::ChunkStore(std::string store_path, uint32_t size) : base_path(std::m
         }
         closedir(d);
     }
-    collector = std::make_unique<LruCollector>(size, [this](uint32_t id) -> void { this->remove_chunk(id); });
+    collector = std::make_unique<LruCollector>(size, [this](uint32_t id) -> void {
+        debug_print("Removing chunk %d form store\n", id);
+        this->remove_chunk(id);
+    });
     for (auto id : in_store) {
         collector->update(id);
     }

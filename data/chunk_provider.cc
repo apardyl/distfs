@@ -73,5 +73,8 @@ void ChunkProvider::remove_chunk(uint32_t id) {
 ChunkProvider::ChunkProvider(ChunkExternalProvider &client, ChunkStore &chunkStore, uint32_t cache_size)
         : chunkStore(chunkStore), compressedStore(CompressedStore(chunkStore)), client(client) {
     collector = std::make_unique<LruCollector>(cache_size,
-                                               [this](uint32_t id) -> void { this->remove_chunk(id); });
+                                               [this](uint32_t id) -> void {
+                                                   debug_print("Removing chunk %d form cache\n", id);
+                                                   this->remove_chunk(id);
+                                               });
 }
