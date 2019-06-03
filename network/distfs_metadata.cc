@@ -6,7 +6,7 @@
 #include <random>
 
 #include "distfs_metadata.h"
-#include "../common/checksum_engine.h"
+#include "checksum_engine.h"
 #include "../common/consts.h"
 
 DistfsMetadata::DistfsMetadata(std::string peer, std::shared_ptr<distfs::DistFS::Stub> bootrstrapPeer, uint64_t id,

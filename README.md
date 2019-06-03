@@ -14,6 +14,10 @@ Server-only mode:
 ```
     distfs serve <path to distfs cache> <port to listen on>
 ```
+Mirror server-only mode:
+```
+    distfs mirror <path to distfs cache> <port to listen on> <known distfs node>
+```
 Mount distfs:
 ```
     distfs mount <path to distfs cache> <cache size in 4MB block number> <port to listen on> <known distfs node> <mount path>

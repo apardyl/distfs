@@ -9,7 +9,7 @@
 #include "distfs_metadata.h"
 #include "network/proto/distfs.grpc.pb.h"
 #include "../common/ordered_set.h"
-#include "../common/checksum_engine.h"
+#include "checksum_engine.h"
 #include "chunk_availability.h"
 #include "../common/consts.h"
 

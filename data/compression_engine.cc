@@ -1,5 +1,5 @@
 #include "compression_engine.h"
-#include <lz4hc.h>
+#include "lz4hc.h"
 #include <stdint.h>
 
 int CompressionEngine::compress(char *dest, int dest_max_size, char *src, int src_size) {

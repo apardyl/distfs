@@ -68,6 +68,8 @@ int main(int argc, char *argv[]) {
            "    distfs build <path to distfs cache> <path to source directory>\n"
            "Server-only mode:\n"
            "    distfs serve <path to distfs cache> <port to listen on>\n"
+           "Mirror server-only mode:\n"
+           "    distfs mirror <path to distfs cache> <port to listen on> <known distfs node>\n"
            "Mount distfs:\n"
            "    distfs mount <path to distfs cache> <cache size in 4MB block number> <port to listen on> <known distfs node> <mount path>\n");
     return -1;
