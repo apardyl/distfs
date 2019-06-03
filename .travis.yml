@@ -1,0 +1,35 @@
+dist: xenial
+language: cpp
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+    packages:
+    - fuse
+    - libfuse-dev
+    - g++-8
+    - gcc-8
+env:
+  - BAZEL_V=0.22.0
+before_install:
+  - wget -O install.sh "https://github.com/bazelbuild/bazel/releases/download/${BAZEL_V}/bazel-${BAZEL_V}-installer-linux-x86_64.sh"
+  - chmod +x install.sh
+  - ./install.sh --user
+  - rm -f install.sh
+  - export PATH=$HOME/bin:$PATH
+  - export CC=gcc-8
+script:
+  - bazel build :distfs --verbose_failures --spawn_strategy=standalone --genrule_strategy=standalone --curses=no --jobs=4
+
+deploy:
+  provider: releases
+  skip_cleanup: true
+  api_key: "$GITHUB_TOKEN"
+  file_glob: true
+  file:
+    - bazel-out/k8-fastbuild/bin/distfs
+  on:
+    repo: apardyl/distfs
+    tags: true
+    branch: master
