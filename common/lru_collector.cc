@@ -15,12 +15,13 @@ void LruCollector::update(uint32_t id) {
             remover(last);
         }
     } else {
-        iterators.erase(it);
+        queue.erase(it->second);
     }
     queue.push_front(id);
     iterators[id] = queue.begin();
 }
 
 void LruCollector::remove(uint32_t id) {
+    std::lock_guard<std::mutex> guard(mutex);
     iterators.erase(id);
 }

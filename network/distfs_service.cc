@@ -66,6 +66,7 @@ DistfsService::DistfsService(ChunkStore &store, ConnectionPool &connectionPool)
 
 grpc::Status DistfsService::GetMetadata(::grpc::ServerContext *context, const ::distfs::Empty *request,
                                         ::distfs::Metadata *response) {
+    debug_print("InfoExchange from %s\n", context->peer().c_str());
     response->set_fs_id(connectionPool.get_fs_id());
     response->set_node_id(connectionPool.get_node_id());
     for (auto &s : connectionPool.get_block_hashes()) {
