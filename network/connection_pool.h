@@ -9,6 +9,7 @@
 #include "distfs_metadata.h"
 #include "network/proto/distfs.grpc.pb.h"
 #include "../common/ordered_set.h"
+#include "../common/checksum_engine.h"
 #include "chunk_availability.h"
 
 class ConnectionPool : public ChunkExternalProvider {
@@ -22,6 +23,7 @@ class ConnectionPool : public ChunkExternalProvider {
     ChunkStore &store;
 
     std::mt19937 generator;
+    ChecksumEngine checksumEngine;
 
     class Connection {
     public:

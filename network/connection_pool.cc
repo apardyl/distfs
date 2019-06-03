@@ -52,6 +52,11 @@ ErrorCode ConnectionPool::fetch_chunk(uint32_t id) {
 
         auto status = reader->Finish();
         if (status.ok()) {
+            std::string checksum = checksumEngine.checksum(buff.get(), offset);
+            if (checksum != metadata.get_hashes()[id]) {
+                fprintf(stderr, "Chunk hash mismatch for %d\n", id);
+                continue;
+            }
             store.write_chunk(id, buff.get(), offset);
             return ErrorCode::OK;
         }
