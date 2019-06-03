@@ -55,8 +55,10 @@ ErrorCode ChunkStore::read_chunk(uint32_t id, char *buffer, uint32_t *size) {
     int fd = open(buf, O_RDONLY);
     if (fd == -1) {
         if (errno == ENOENT) {
+            debug_print("ChunkStore: not found %d\n", id);
             return ErrorCode::NOT_FOUND;
         }
+        debug_print("ChunkStore: read error for %d\n", id);
         return ErrorCode::INTERNAL_ERROR;
     }
 
@@ -91,6 +93,7 @@ ErrorCode ChunkStore::write_chunk(uint32_t id, char *buffer, uint32_t size) {
     int fd = open(buf, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
     if (fd == -1) {
         printf("%d\n", errno);
+        debug_print("ChunkStore: write error for %d\n", id);
         return ErrorCode::INTERNAL_ERROR;
     }
     ssize_t res = 0;
@@ -101,6 +104,7 @@ ErrorCode ChunkStore::write_chunk(uint32_t id, char *buffer, uint32_t size) {
     } while (size > 0 && res > 0);
     if (res == -1) {
         close(fd);
+        debug_print("ChunkStore: write error for %d\n", id);
         return ErrorCode::INTERNAL_ERROR;
     }
     close(fd);
@@ -143,6 +147,7 @@ ErrorCode ChunkStore::create_base_dir(const char *path_buf) {
             *b = '\0';
             int res = mkdir(buff, S_IRWXU);
             if (res != 0 && errno != EEXIST) {
+                debug_print("ChunkStore: dir creation error %s\n", path_buf);
                 return ErrorCode::INTERNAL_ERROR;
             }
         }

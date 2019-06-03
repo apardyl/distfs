@@ -10,6 +10,7 @@ ErrorCode CompressedStore::read_chunk(uint32_t id, char *buffer, uint32_t *size)
     if (err == ErrorCode::OK) {
         int status = compressionEngine.decompress(buffer, CHUNK_SIZE_BYTES, buf, rd);
         if (status < 0) {
+            debug_print("CompressedStore: decompression error for %d\n", id);
             err = ErrorCode::INTERNAL_ERROR;
         } else {
             *size = status;
@@ -23,6 +24,7 @@ ErrorCode CompressedStore::write_chunk(uint32_t id, char *buffer, uint32_t size)
     char *buf = new char[CHUNK_SIZE_BYTES];
     int status = compressionEngine.compress(buf, CHUNK_SIZE_BYTES, buffer, size);
     if (status < 0) {
+        debug_print("CompressedStore: compression error for %d\n", id);
         return ErrorCode::INTERNAL_ERROR;
     }
     auto err = chunkStore.write_chunk(id, buf, status);
