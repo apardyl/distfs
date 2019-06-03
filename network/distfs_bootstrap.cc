@@ -25,5 +25,5 @@ DistfsMetadata DistfsBootstrap::fetch_metadata(const std::string &peer) {
     for (auto &h : response.block_hash()) {
         hashes.push_back(h);
     }
-    return DistfsMetadata(peer, stub, response.fs_id(), std::move(hashes));
+    return DistfsMetadata(peer, stub, response.fs_id(), response.node_id(), std::move(hashes));
 }

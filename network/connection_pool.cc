@@ -17,6 +17,7 @@ ConnectionPool::ConnectionPool(DistfsMetadata &metadata, ChunkStore &store, uint
         Connection connection;
         connection.stub = metadata.get_bootrstrap_peer();
         connection.url = metadata.get_peer();
+        connection.n_id = metadata.get_node_id();
         connections.push_back(std::move(connection));
         active_peers.insert(metadata.get_peer());
     }
@@ -122,15 +123,19 @@ void ConnectionPool::worker_get_pex() {
     std::lock_guard<std::mutex> guard(connections_mutex);
     std::lock_guard<std::mutex> guard2(peer_list_mutex);
 
-    PeerList request;
-    for (auto &connection : connections) {
-        request.add_peer(connection.url);
-    }
-
     for (auto it = connections.begin(); it != connections.end();) {
         auto &c = *it;
         if (now - c.last_pex > PEX_REFRESH_S) {
             ClientContext context;
+
+            PeerList request;
+            request.set_node_id(node_id);
+            for (auto &connection : connections) {
+                if (connection.n_id != c.n_id) {
+                    request.add_peer(connection.url);
+                }
+            }
+
             PeerList response;
             context.set_deadline(std::chrono::system_clock::now() + std::chrono::milliseconds(PING_TIMEOUT));
             auto err = c.stub->PeerExchange(&context, request, &response);
@@ -187,6 +192,8 @@ void ConnectionPool::worker_expand() {
 
         Connection connection;
         connection.stub = stub;
+        connection.url = p;
+        connection.n_id = response.node_id();
         connection.availability = ChunkAvailability(response.available());
         time(&connection.last_info);
         {
@@ -248,6 +255,8 @@ void ConnectionPool::worker_explore() {
 
             Connection connection;
             connection.stub = stub;
+            connection.url = p;
+            connection.n_id = response.node_id();
             connection.availability = ChunkAvailability(response.available());
             time(&connection.last_info);
             {
@@ -277,7 +286,7 @@ void ConnectionPool::worker() {
     std::this_thread::sleep_for(std::chrono::seconds(2));
 }
 
-void ConnectionPool::info_from(const std::string &peer, const ChunkAvailability &chunkAvailability) {
+void ConnectionPool::info_from(const std::string &peer, uint64_t n_id, const ChunkAvailability &chunkAvailability) {
     {
         std::lock_guard<std::mutex> guard(peer_list_mutex);
         if (active_peers.count(peer) == 0) {
@@ -290,9 +299,9 @@ void ConnectionPool::info_from(const std::string &peer, const ChunkAvailability 
         std::lock_guard<std::mutex> guard(connections_mutex);
         bool changed = false;
         for (Connection &c : connections) {
-            if (c.url == peer) {
+            if (c.n_id == n_id) {
                 c.availability = chunkAvailability;
-                debug_print("Received info from %s\n", peer.c_str());
+                time(&c.last_info);
                 changed = true;
                 break;
             }

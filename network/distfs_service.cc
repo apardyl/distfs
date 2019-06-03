@@ -44,9 +44,8 @@ DistfsService::InfoExchange(::grpc::ServerContext *context, const ::distfs::Info
 
     std::string peer = context->peer().substr(context->peer().substr(0, 2) == "ip" ? 5 : 0, std::string::npos);
     std::string p = peer.substr(0, peer.find_last_of(':') + 1) + std::to_string(request->listen_port());
-    debug_print("Connection from %s, return port %s\n", context->peer().c_str(),
-                std::to_string(request->listen_port()).c_str());
-    connectionPool.info_from(p, ChunkAvailability(request->available()));
+    debug_print("InfoExchange from %s, return %s\n", context->peer().c_str(), p.c_str());
+    connectionPool.info_from(p, request->node_id(), ChunkAvailability(request->available()));
     response->set_available(ChunkAvailability(store.available()).bitmask());
     response->set_fs_id(connectionPool.get_fs_id());
     response->set_node_id(connectionPool.get_node_id());
@@ -56,7 +55,8 @@ DistfsService::InfoExchange(::grpc::ServerContext *context, const ::distfs::Info
 
 grpc::Status DistfsService::PeerExchange(::grpc::ServerContext *context, const ::distfs::PeerList *request,
                                          ::distfs::PeerList *response) {
-    connectionPool.pex_from(context->peer(), request->peer(), *response);
+    response->set_node_id(connectionPool.get_node_id());
+    connectionPool.pex_from(context->peer(), request->node_id(), request->peer(), *response);
 
     return grpc::Status::OK;
 }
@@ -67,6 +67,7 @@ DistfsService::DistfsService(ChunkStore &store, ConnectionPool &connectionPool)
 grpc::Status DistfsService::GetMetadata(::grpc::ServerContext *context, const ::distfs::Empty *request,
                                         ::distfs::Metadata *response) {
     response->set_fs_id(connectionPool.get_fs_id());
+    response->set_node_id(connectionPool.get_node_id());
     for (auto &s : connectionPool.get_block_hashes()) {
         response->add_block_hash(s);
     }

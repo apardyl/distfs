@@ -13,10 +13,12 @@ class DistfsMetadata {
 
     uint64_t id;
 
+    uint64_t node_id;
+
     std::vector<std::string> block_hashes;
 public:
     DistfsMetadata(std::string peer, std::shared_ptr<distfs::DistFS::Stub> bootrstrapPeer, uint64_t id,
-                   std::vector<std::string> blockHashes);
+                   uint64_t nodeId, std::vector<std::string> blockHashes);
 
     DistfsMetadata(ChunkStore& store);
 
@@ -27,6 +29,8 @@ public:
     const std::vector<std::string>& get_hashes() const;
 
     uint64_t get_id() const;
+
+    uint64_t get_node_id() const;
 };
 
 

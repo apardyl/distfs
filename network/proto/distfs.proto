@@ -31,7 +31,9 @@ message Info {
 }
 
 message PeerList {
-    repeated string peer = 1;
+    uint64 node_id = 1;
+
+    repeated string peer = 2;
 }
 
 message Empty {
@@ -40,5 +42,7 @@ message Empty {
 message Metadata {
     uint64 fs_id = 1;
 
-    repeated string block_hash = 2;
+    uint64 node_id = 2;
+
+    repeated string block_hash = 3;
 }

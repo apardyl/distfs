@@ -10,9 +10,9 @@
 #include "../common/consts.h"
 
 DistfsMetadata::DistfsMetadata(std::string peer, std::shared_ptr<distfs::DistFS::Stub> bootrstrapPeer, uint64_t id,
-                               std::vector<std::string> blockHashes)
+                               uint64_t nodeId, std::vector<std::string> blockHashes)
         : peer(std::move(peer)), bootrstrap_peer(std::move(bootrstrapPeer)), id(id),
-          block_hashes(std::move(blockHashes)) {}
+          node_id(nodeId), block_hashes(std::move(blockHashes)) {}
 
 const std::string &DistfsMetadata::get_peer() const {
     return peer;
@@ -52,5 +52,9 @@ DistfsMetadata::DistfsMetadata(ChunkStore &store) {
 
 const std::vector<std::string> &DistfsMetadata::get_hashes() const {
     return block_hashes;
+}
+
+uint64_t DistfsMetadata::get_node_id() const {
+    return node_id;
 }
 

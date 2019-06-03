@@ -11,6 +11,7 @@
 #include "../common/ordered_set.h"
 #include "../common/checksum_engine.h"
 #include "chunk_availability.h"
+#include "../common/consts.h"
 
 class ConnectionPool : public ChunkExternalProvider {
     uint32_t active_connections_limit;
@@ -30,6 +31,7 @@ class ConnectionPool : public ChunkExternalProvider {
         std::shared_ptr<distfs::DistFS::Stub> stub;
         ChunkAvailability availability;
         std::string url;
+        uint64_t n_id;
         time_t last_info = 0;
         time_t last_pex = 0;
 
@@ -68,10 +70,10 @@ public:
 
     ErrorCode fetch_chunk(uint32_t id) override;
 
-    void info_from(const std::string &peer, const ChunkAvailability &chunkAvailability);
+    void info_from(const std::string &peer, uint64_t n_id, const ChunkAvailability &chunkAvailability);
 
     template<typename T, typename Y>
-    void pex_from(const std::string &peer, const T &incoming_list, Y &outgoing_list) {
+    void pex_from(const std::string &peer, uint64_t n_id, const T &incoming_list, Y &outgoing_list) {
         {
             std::lock_guard<std::mutex> guard(peer_list_mutex);
             for (const std::string &p : incoming_list) {
@@ -82,9 +84,10 @@ public:
         }
         {
             for (auto &connection : connections) {
-                outgoing_list.add_peer(connection.url);
-                if (connection.url == peer) {
+                if (connection.n_id == n_id) {
                     time(&connection.last_pex);
+                } else {
+                    outgoing_list.add_peer(connection.url);
                 }
             }
         }
