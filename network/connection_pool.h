@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <thread>
+#include <random>
 #include "../data/chunk_external_provider.h"
 #include "distfs_metadata.h"
 #include "network/proto/distfs.grpc.pb.h"
@@ -19,6 +20,8 @@ class ConnectionPool : public ChunkExternalProvider {
 
     DistfsMetadata &metadata;
     ChunkStore &store;
+
+    std::mt19937 generator;
 
     class Connection {
     public:

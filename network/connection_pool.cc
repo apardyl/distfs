@@ -10,25 +10,13 @@ ConnectionPool::ConnectionPool(DistfsMetadata &metadata, ChunkStore &store, uint
                                uint32_t peerCandidatesLimit, bool active)
         : active_connections_limit(
         activeConnectionsLimit), peer_candidates(peerCandidatesLimit), metadata(metadata), store(store),
-          stop_worker(false) {
-    std::random_device rd;
-    std::mt19937 gen(rd());
+          generator(std::random_device()()), stop_worker(false) {
     std::uniform_int_distribution<uint64_t> dis(0, std::numeric_limits<uint64_t>::max());
-    node_id = dis(gen);
+    node_id = dis(generator);
     if (!metadata.get_peer().empty() && metadata.get_bootrstrap_peer()) {
         Connection connection;
         connection.stub = metadata.get_bootrstrap_peer();
-        Info request;
-        request.set_fs_id(metadata.get_id());
-        request.set_available(ChunkAvailability(store.available()).bitmask());
-        ClientContext context;
-        Info response;
-        context.set_deadline(std::chrono::system_clock::now() + std::chrono::milliseconds(PING_TIMEOUT));
-        auto err = connection.stub->InfoExchange(&context, request, &response);
-        if (!err.ok() || response.fs_id() != metadata.get_id() || response.node_id() == node_id) {
-            throw std::logic_error("Lost connection during init");
-        }
-        connection.availability = ChunkAvailability(response.available());
+        connection.url = metadata.get_peer();
         connections.push_back(std::move(connection));
         active_peers.insert(metadata.get_peer());
     }
@@ -72,11 +60,17 @@ ErrorCode ConnectionPool::fetch_chunk(uint32_t id) {
 
 std::tuple<std::shared_ptr<distfs::DistFS::Stub>, ErrorCode> ConnectionPool::connection_for_block(uint32_t id) {
     std::lock_guard<std::mutex> guard(connections_mutex);
+    std::vector<std::shared_ptr<distfs::DistFS::Stub>> a;
     for (auto &c : connections) {
         if (c.availability[id]) {
-            return std::make_tuple(c.stub, ErrorCode::OK);
+            a.push_back(c.stub);
         }
     }
+    if (!a.empty()) {
+        std::uniform_int_distribution<uint64_t> dis(0, a.size() - 1);
+        return std::make_tuple(a[dis(generator)], ErrorCode::OK);
+    }
+
     return std::make_tuple(std::shared_ptr<distfs::DistFS::Stub>(), ErrorCode::NOT_FOUND);
 }
 
@@ -98,7 +92,7 @@ void ConnectionPool::worker_get_info() {
             context.set_deadline(std::chrono::system_clock::now() + std::chrono::milliseconds(PING_TIMEOUT));
             auto err = c.stub->InfoExchange(&context, request, &response);
             if (err.ok()) {
-                c.availability = ChunkAvailability(request.available());
+                c.availability = ChunkAvailability(response.available());
                 time(&c.last_info);
                 it++;
             } else {
@@ -283,7 +277,7 @@ uint64_t ConnectionPool::get_fs_id() {
     return metadata.get_id();
 }
 
-const std::vector<string> & ConnectionPool::get_block_hashes() {
+const std::vector<string> &ConnectionPool::get_block_hashes() {
     return metadata.get_hashes();
 }
 
